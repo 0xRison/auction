@@ -17,8 +17,8 @@ contract Auction is ReentrancyGuard{
     address payable public highestBidder;
     uint256 public startBlock;
     uint256 public endBlock;
-    uint256 bidIncrement;
     uint256 public highestBindingBid;
+    uint256 bidIncrement;
 
     mapping(address => uint256) public bids;
     enum State {Started, Running, Ended, Canceled}
