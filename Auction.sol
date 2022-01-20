@@ -2,6 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/security/ReentrancyGuard.sol";
+import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol";
 
 contract AuctionFactory{
     Auction[] public auctions;
@@ -13,25 +14,14 @@ contract AuctionFactory{
 }
 
 contract Auction is ReentrancyGuard{
+    using SafeMath for uint256;
+
     address payable public owner;
     address payable public highestBidder;
     uint256 public startBlock;
     uint256 public endBlock;
     uint256 public highestBindingBid;
     uint256 bidIncrement;
-
-    mapping(address => uint256) public bids;
-    enum State {Started, Running, Ended, Canceled}
-    State public auctionState;
-
-    constructor(address _eoa){
-        owner = payable(_eoa);
-        auctionState = State.Running;
-        startBlock = block.number;
-        endBlock = startBlock + 40320; // will end in one week
-        ipfsHash = "";
-        bidIncrement = 100; 
-    }
 
     modifier notOwner(){
         require(msg.sender != owner);
@@ -53,6 +43,19 @@ contract Auction is ReentrancyGuard{
         _;
     }
 
+    mapping(address => uint256) public bids;
+
+    enum State {Started, Running, Ended, Canceled}
+    State public auctionState;
+
+    constructor(address _eoa){
+        owner = payable(_eoa);
+        auctionState = State.Running;
+        startBlock = block.number;
+        endBlock = startBlock.add(40320); // will end in one week
+        bidIncrement = 100; 
+    }
+
     function cancelAuction() public onlyOwner{
         auctionState = State.Canceled;
     }
@@ -61,15 +64,15 @@ contract Auction is ReentrancyGuard{
         require(auctionState == State.Running);
         require(msg.value >= 100);
 
-        uint256 currentBid = bids[msg.sender] + msg.value;
+        uint256 currentBid = bids[msg.sender].add(msg.value);
         require(currentBid > highestBindingBid);
 
         bids[msg.sender] = currentBid;
 
         if(currentBid <= bids[highestBidder]){
-            highestBindingBid = min(currentBid + bidIncrement, bids[highestBidder]);
+            highestBindingBid = min(currentBid.add(bidIncrement), bids[highestBidder]);
         }else{
-            highestBindingBid = min(currentBid, bids[highestBidder] + bidIncrement);
+            highestBindingBid = min(currentBid, bids[highestBidder].add(bidIncrement));
             highestBidder = payable(msg.sender);
         }
     }
@@ -95,7 +98,7 @@ contract Auction is ReentrancyGuard{
             }else{ // this is a bidder
                 if(msg.sender == highestBidder){
                     recipient = highestBidder;
-                    value = bids[highestBidder] - highestBindingBid;
+                    value = bids[highestBidder].sub(highestBindingBid);
                 }else{ // this is neither the owner nor the highestBidder
                     recipient = payable(msg.sender);
                     value = bids[msg.sender];
@@ -109,5 +112,4 @@ contract Auction is ReentrancyGuard{
         // send value to the recipient
         recipient.transfer(value);
     }
-
 }
