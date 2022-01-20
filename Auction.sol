@@ -14,19 +14,15 @@ contract AuctionFactory{
 
 contract Auction is ReentrancyGuard{
     address payable public owner;
+    address payable public highestBidder;
     uint256 public startBlock;
     uint256 public endBlock;
-
-    string public ipfsHash;
-
-    enum State {Started, Running, Ended, Canceled}
-    State public auctionState;
-
+    uint256 bidIncrement;
     uint256 public highestBindingBid;
-    address payable public highestBidder;
 
     mapping(address => uint256) public bids;
-    uint256 bidIncrement;
+    enum State {Started, Running, Ended, Canceled}
+    State public auctionState;
 
     constructor(address _eoa){
         owner = payable(_eoa);
